@@ -1,0 +1,166 @@
+{
+  "version": 1,
+  "rules": [
+    {
+      "rule_id": "placeholder_title__final_split",
+      "category": "placeholder_title",
+      "status": "confirmed",
+      "patterns": [
+        {
+          "type": "regex",
+          "value": "^\\s*Final split\\s*$"
+        }
+      ],
+      "examples": [
+        "Final split"
+      ],
+      "rewrite_direction": "Replace workflow-like slide titles with the actual content title.",
+      "evidence_count": 1
+    },
+    {
+      "rule_id": "template_label__question_number",
+      "category": "template_label",
+      "status": "confirmed",
+      "patterns": [
+        {
+          "type": "regex",
+          "value": "^\\s*Question\\s+\\d+(?:\\s*\\([^\\n]+\\))?:?\\s*$"
+        }
+      ],
+      "examples": [
+        "Question 1",
+        "Question 1 (Convergence speed):"
+      ],
+      "rewrite_direction": "Replace question-number labels with the real subsection title.",
+      "evidence_count": 1
+    },
+    {
+      "rule_id": "template_label__answer_label",
+      "category": "template_label",
+      "status": "confirmed",
+      "patterns": [
+        {
+          "type": "regex",
+          "value": "^\\s*Answer:\\s*$"
+        }
+      ],
+      "examples": [
+        "Answer:"
+      ],
+      "rewrite_direction": "Remove the answer label and start with the actual content.",
+      "evidence_count": 1
+    },
+    {
+      "rule_id": "template_label__task_number",
+      "category": "template_label",
+      "status": "confirmed",
+      "patterns": [
+        {
+          "type": "regex",
+          "value": "^\\s*Task\\s+\\d+(?:\\s*\\([^\\n]+\\))?(?:\\s*[:.-]\\s*[A-Z][^\\n]*|\\s+[A-Z][^\\n]*)?\\s*$"
+        }
+      ],
+      "examples": [
+        "Task 3"
+      ],
+      "rewrite_direction": "Replace task-number labels with a content-native subsection title.",
+      "evidence_count": 1
+    },
+    {
+      "rule_id": "meta_process__directly_answering",
+      "category": "meta_process",
+      "status": "confirmed",
+      "patterns": [
+        {
+          "type": "regex",
+          "value": "Directly answering"
+        }
+      ],
+      "examples": [
+        "Directly answering the robustness question"
+      ],
+      "rewrite_direction": "Delete process narration and present the answer directly.",
+      "evidence_count": 1
+    },
+    {
+      "rule_id": "fake_academic__three_column",
+      "category": "fake_academic",
+      "status": "confirmed",
+      "patterns": [
+        {
+          "type": "regex",
+          "value": "\\bThree-column\\b"
+        }
+      ],
+      "examples": [
+        "Three-column disturbance time-series comparison"
+      ],
+      "rewrite_direction": "Describe the figure variables or conditions directly instead of using layout-driven wording.",
+      "evidence_count": 1
+    },
+    {
+      "rule_id": "homework_title__solutions_template",
+      "category": "homework_title",
+      "status": "confirmed",
+      "patterns": [
+        {
+          "type": "regex",
+          "value": "Homework\\s+\\d+\\s+Solutions"
+        }
+      ],
+      "examples": [
+        "Course Homework 1 Solutions"
+      ],
+      "rewrite_direction": "Use the course title plus an assignment subtitle instead of a solutions-template title.",
+      "evidence_count": 1
+    },
+    {
+      "rule_id": "placeholder_title__discussion_for_the_next_meeting",
+      "category": "placeholder_title",
+      "status": "confirmed",
+      "patterns": [
+        {
+          "type": "regex",
+          "value": "^\\s*Discussion for the next meeting\\s*$"
+        }
+      ],
+      "examples": [
+        "Discussion for the next meeting"
+      ],
+      "rewrite_direction": "Replace workflow-like titles with the actual content title.",
+      "evidence_count": 1
+    },
+    {
+      "rule_id": "meta_process__what_this_deck_is_trying_to_do",
+      "category": "meta_process",
+      "status": "confirmed",
+      "patterns": [
+        {
+          "type": "regex",
+          "value": "What this deck is trying to do"
+        }
+      ],
+      "examples": [
+        "What this deck is trying to do"
+      ],
+      "rewrite_direction": "Delete process narration and keep only the final content.",
+      "evidence_count": 1
+    },
+    {
+      "rule_id": "fake_academic__the_six_cases_are",
+      "category": "fake_academic",
+      "status": "confirmed",
+      "patterns": [
+        {
+          "type": "regex",
+          "value": "the six cases are:"
+        }
+      ],
+      "examples": [
+        "the six cases are:"
+      ],
+      "rewrite_direction": "Rewrite with shorter, discipline-native phrasing.",
+      "evidence_count": 1
+    }
+  ]
+}
