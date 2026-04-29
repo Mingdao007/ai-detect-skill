@@ -109,7 +109,7 @@
         }
       ],
       "examples": [
-        "Course Homework 1 Solutions"
+        "MECH5561 Homework 1 Solutions"
       ],
       "rewrite_direction": "Use the course title plus an assignment subtitle instead of a solutions-template title.",
       "evidence_count": 1
@@ -130,11 +130,11 @@
       "rewrite_direction": "Replace workflow-like titles with the actual content title.",
       "evidence_count": 1
     },
-    {
-      "rule_id": "meta_process__what_this_deck_is_trying_to_do",
-      "category": "meta_process",
-      "status": "confirmed",
-      "patterns": [
+        {
+            "rule_id": "meta_process__what_this_deck_is_trying_to_do",
+            "category": "meta_process",
+            "status": "confirmed",
+            "patterns": [
         {
           "type": "regex",
           "value": "What this deck is trying to do"
@@ -143,14 +143,114 @@
       "examples": [
         "What this deck is trying to do"
       ],
-      "rewrite_direction": "Delete process narration and keep only the final content.",
-      "evidence_count": 1
-    },
-    {
-      "rule_id": "fake_academic__the_six_cases_are",
-      "category": "fake_academic",
-      "status": "confirmed",
-      "patterns": [
+            "rewrite_direction": "Delete process narration and keep only the final content.",
+            "evidence_count": 1
+        },
+        {
+            "rule_id": "meta_process__internal_reasoning_leak_in_external_draft",
+            "category": "meta_process",
+            "status": "confirmed",
+            "patterns": [
+                {
+                    "type": "regex",
+                    "value": "我理解(?:主要)?是"
+                },
+                {
+                    "type": "regex",
+                    "value": "这里(?:主要|本质上|可以理解为)"
+                },
+                {
+                    "type": "regex",
+                    "value": "你可以理解成"
+                },
+                {
+                    "type": "regex",
+                    "value": "如果(?:他们|对方|后续).*?(?:需要|要求).*?(?:再|后续).*(?:补充|提供)"
+                }
+            ],
+            "examples": [
+                "关于您提到的工装尺寸和弯矩，我理解主要是需要评估末端工具重量以及力作用点到传感器的距离。",
+                "HS code 你可以理解成清关时用来查税费的商品编码。",
+                "如果他们需要，你后续再补尺寸。"
+            ],
+            "rewrite_direction": "For sendable external drafts, delete internal analysis or convert it to one concise fact the recipient needs.",
+            "evidence_count": 1
+        },
+        {
+            "rule_id": "meta_process__external_draft_entropy",
+            "category": "meta_process",
+            "status": "confirmed",
+            "patterns": [
+                {
+                    "type": "regex",
+                    "value": "现阶段.*?(?:还没有|暂时没有).*?(?:如果|后续).*?(?:补充|提供)"
+                },
+                {
+                    "type": "regex",
+                    "value": "最终\\s*CAD\\s*尺寸.*?(?:后续|再).*?(?:补充|提供)"
+                },
+                {
+                    "type": "regex",
+                    "value": "不一定要写给对方"
+                },
+                {
+                    "type": "regex",
+                    "value": "解释给.*?听的内容.*?发给"
+                }
+            ],
+            "examples": [
+                "现阶段我还没有最终 CAD 尺寸，如果后续确定具体连接件，我可以再补充重量、长度和安装方式供您评估。"
+            ],
+            "rewrite_direction": "For sendable external drafts, keep only action-bearing facts: boundary condition, request, timing, and fee or logistics question.",
+            "evidence_count": 1
+        },
+        {
+            "rule_id": "meta_process__email_overcomplete_politeness",
+            "category": "meta_process",
+            "status": "confirmed",
+            "patterns": [
+                {
+                    "type": "regex",
+                    "value": "I agree with the arrangement and am happy to take on"
+                },
+                {
+                    "type": "regex",
+                    "value": "I appreciate your and .* guidance with the script"
+                },
+                {
+                    "type": "regex",
+                    "value": "Please let me know if there are any specific arrangements I should be aware of"
+                }
+            ],
+            "examples": [
+                "Thank you very much. I agree with the arrangement and am happy to take on the facilitator role.",
+                "I appreciate your and Mingyu's guidance with the script.",
+                "Please let me know if there are any specific arrangements I should be aware of."
+            ],
+            "rewrite_direction": "For short administrative emails, replace only the user's intended local sentence and avoid adding confirmations, generic appreciation, or extra readiness language already handled elsewhere.",
+            "evidence_count": 1
+        },
+        {
+            "rule_id": "template_label__email_sentence_replacement_scope",
+            "category": "template_label",
+            "status": "confirmed",
+            "patterns": [
+                {
+                    "type": "regex",
+                    "value": "Thank you very much\\. I agree with the arrangement\\."
+                }
+            ],
+            "examples": [
+                "Thank you very much. I agree with the arrangement."
+            ],
+            "rewrite_direction": "When the user only wants a replacement for a thank-you sentence, keep it to the thank-you sentence, e.g. `Thank you very much for your kindness.`",
+            "evidence_count": 1
+        },
+        {
+            "rule_id": "fake_academic__the_six_cases_are",
+            "category": "fake_academic",
+            "status": "confirmed",
+            "patterns": [
         {
           "type": "regex",
           "value": "the six cases are:"

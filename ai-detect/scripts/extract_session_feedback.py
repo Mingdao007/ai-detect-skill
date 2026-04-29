@@ -13,6 +13,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_QUEUE_PATH = ROOT / "data" / "review_queue.jsonl"
 DEFAULT_RULES_PATH = ROOT / "data" / "rules.json"
+REDUNDANCY_ROOT = ROOT / "redundancy"
+DEFAULT_REDUNDANCY_QUEUE_PATH = REDUNDANCY_ROOT / "data" / "review_queue.jsonl"
+DEFAULT_REDUNDANCY_RULES_PATH = REDUNDANCY_ROOT / "data" / "rules.json"
 SOURCE_ROOTS = {
     "codex": Path.home() / ".codex" / "sessions",
     "claude": Path.home() / ".claude" / "projects",
@@ -23,9 +26,21 @@ CATEGORY_PRIORITY = [
     "meta_process",
     "fake_academic",
     "homework_title",
+    "redundant_filler",
+    "empty_contrast",
+    "sequencer_label",
+    "adjacent_restatement",
+    "axis_repetition",
 ]
+REDUNDANCY_CATEGORIES = {
+    "redundant_filler",
+    "empty_contrast",
+    "sequencer_label",
+    "adjacent_restatement",
+    "axis_repetition",
+}
 NOISE_MARKERS = (
-    "# startup instruction payload instructions",
+    "# AGENTS.md instructions",
     "Base directory for this skill:",
     "You are Codex, a coding agent",
     "<skill>",
@@ -98,6 +113,22 @@ CANDIDATE_PATTERNS = [
         "homework_title",
         re.compile(r"[A-Za-z0-9/ -]{0,40}Homework\s+\d+\s+Solutions", re.IGNORECASE),
     ),
+    (
+        "redundant_filler",
+        re.compile(r"\bWe organize this part as\b", re.IGNORECASE),
+    ),
+    (
+        "empty_contrast",
+        re.compile(r"not\s+(?:as\s+)?a\s+list\s+of\s+unrelated\s+papers", re.IGNORECASE),
+    ),
+    (
+        "sequencer_label",
+        re.compile(r"(?:^|\{)\s*(?:First|Then|Finally)\s*--\s+[A-Z]", re.IGNORECASE),
+    ),
+    (
+        "sequencer_label",
+        re.compile(r"(?:^|\{)\s*(?:首先|然后|最后)\s*(?:--|：|:)\s*[\u4e00-\u9fffA-Za-z]"),
+    ),
 ]
 REWRITE_DIRECTIONS = {
     "placeholder_title": "Replace workflow-like titles with the actual content title.",
@@ -105,6 +136,11 @@ REWRITE_DIRECTIONS = {
     "meta_process": "Delete process narration and keep only the final content.",
     "fake_academic": "Rewrite with shorter, discipline-native phrasing.",
     "homework_title": "Use the course title plus an assignment subtitle instead of a solutions-template title.",
+    "redundant_filler": "Delete the filler framing and state the content directly.",
+    "empty_contrast": "Delete the empty contrast and write the real distinction directly.",
+    "sequencer_label": "Remove the sequencing scaffold and title the content directly.",
+    "adjacent_restatement": "Merge the two sentences or delete the weaker restatement.",
+    "axis_repetition": "Front-load the comparison axis once and remove repeated low-information axis labels.",
 }
 DELIVERY_MARKERS = (
     ".tex",
@@ -263,6 +299,12 @@ def write_queue(path: Path, entries: list[dict]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     lines = [json.dumps(entry, ensure_ascii=False) for entry in sort_queue(entries)]
     path.write_text("\n".join(lines) + ("\n" if lines else ""), encoding="utf-8")
+
+
+def category_target(category: str, args: argparse.Namespace) -> tuple[Path, Path]:
+    if category in REDUNDANCY_CATEGORIES:
+        return Path(args.redundancy_queue), Path(args.redundancy_rules)
+    return Path(args.queue), Path(args.rules)
 
 
 def iter_codex_messages(root: Path) -> list[MessageRecord]:
@@ -597,9 +639,11 @@ def print_batch(entries: list[dict], limit: int, category: str) -> None:
 
 
 def cmd_extract(args: argparse.Namespace) -> None:
-    rules = load_rules(Path(args.rules))
-    compiled_rules = compile_rule_patterns(rules)
-    queue = load_queue(Path(args.queue))
+    parent_rules = load_rules(Path(args.rules))
+    redundancy_rules = load_rules(Path(args.redundancy_rules))
+    compiled_rules = compile_rule_patterns(parent_rules + redundancy_rules)
+    parent_queue = load_queue(Path(args.queue))
+    redundancy_queue = load_queue(Path(args.redundancy_queue))
     records: list[MessageRecord] = []
     source_names = SOURCE_ROOTS.keys() if args.source == "all" else [args.source]
     for source_name in source_names:
@@ -611,39 +655,55 @@ def cmd_extract(args: argparse.Namespace) -> None:
         elif source_name == "claude":
             records.extend(iter_claude_messages(root))
     extracted = extract_candidates(records, compiled_rules)
-    merged = merge_candidates(queue, extracted)
+    parent_extracted = [candidate for candidate in extracted if candidate["category_guess"] not in REDUNDANCY_CATEGORIES]
+    redundancy_extracted = [candidate for candidate in extracted if candidate["category_guess"] in REDUNDANCY_CATEGORIES]
+    merged_parent = merge_candidates(parent_queue, parent_extracted)
+    merged_redundancy = merge_candidates(redundancy_queue, redundancy_extracted)
     if not args.dry_run:
-        write_queue(Path(args.queue), merged)
+        write_queue(Path(args.queue), merged_parent)
+        write_queue(Path(args.redundancy_queue), merged_redundancy)
     counts = Counter(entry["category_guess"] for entry in extracted)
     print(f"Extracted {len(extracted)} unique candidates from {len(records)} messages.")
     for category in CATEGORY_PRIORITY:
         if counts[category]:
             print(f"- {category}: {counts[category]}")
-    print(f"Queue path: {args.queue}")
+    print(f"AI queue path: {args.queue}")
+    print(f"Redundancy queue path: {args.redundancy_queue}")
 
 
 def cmd_next(args: argparse.Namespace) -> None:
-    entries = list(load_queue(Path(args.queue)).values())
+    entries: list[dict] = []
+    if args.scope in {"all", "ai"}:
+        entries.extend(load_queue(Path(args.queue)).values())
+    if args.scope in {"all", "redundancy"}:
+        entries.extend(load_queue(Path(args.redundancy_queue)).values())
     print_batch(entries, args.limit, args.category)
 
 
 def cmd_judge(args: argparse.Namespace) -> None:
-    queue_path = Path(args.queue)
-    rules_path = Path(args.rules)
-    entries = load_queue(queue_path)
-    rules = load_rules(rules_path)
+    parent_entries = load_queue(Path(args.queue))
+    parent_rules = load_rules(Path(args.rules))
+    redundancy_entries = load_queue(Path(args.redundancy_queue))
+    redundancy_rules = load_rules(Path(args.redundancy_rules))
     updated = []
     for identifier in args.candidate_id:
-        if identifier not in entries:
+        if identifier in parent_entries:
+            entry = parent_entries[identifier]
+            rules = parent_rules
+        elif identifier in redundancy_entries:
+            entry = redundancy_entries[identifier]
+            rules = redundancy_rules
+        else:
             raise SystemExit(f"Unknown candidate_id: {identifier}")
-        entry = entries[identifier]
         entry["status"] = args.decision
         entry["user_note"] = args.note
         updated.append(entry)
         if args.decision == "confirmed":
             upsert_rule(rules, entry)
-    write_queue(queue_path, list(entries.values()))
-    write_rules(rules_path, rules)
+    write_queue(Path(args.queue), list(parent_entries.values()))
+    write_rules(Path(args.rules), parent_rules)
+    write_queue(Path(args.redundancy_queue), list(redundancy_entries.values()))
+    write_rules(Path(args.redundancy_rules), redundancy_rules)
     print(f"Updated {len(updated)} candidate(s) to {args.decision}.")
     for entry in updated:
         print(f"- {entry['candidate_id']} {entry['phrase']}")
@@ -664,11 +724,19 @@ def build_parser() -> argparse.ArgumentParser:
     )
     extract_parser.add_argument("--queue", default=str(DEFAULT_QUEUE_PATH))
     extract_parser.add_argument("--rules", default=str(DEFAULT_RULES_PATH))
+    extract_parser.add_argument("--redundancy-queue", default=str(DEFAULT_REDUNDANCY_QUEUE_PATH))
+    extract_parser.add_argument("--redundancy-rules", default=str(DEFAULT_REDUNDANCY_RULES_PATH))
     extract_parser.add_argument("--dry-run", action="store_true")
     extract_parser.set_defaults(func=cmd_extract)
 
     next_parser = subparsers.add_parser("next", help="Show the next pending review batch.")
     next_parser.add_argument("--queue", default=str(DEFAULT_QUEUE_PATH))
+    next_parser.add_argument("--redundancy-queue", default=str(DEFAULT_REDUNDANCY_QUEUE_PATH))
+    next_parser.add_argument(
+        "--scope",
+        choices=["all", "ai", "redundancy"],
+        default="all",
+    )
     next_parser.add_argument(
         "--category",
         choices=["all", *CATEGORY_PRIORITY],
@@ -687,6 +755,8 @@ def build_parser() -> argparse.ArgumentParser:
     judge_parser.add_argument("--note", default="")
     judge_parser.add_argument("--queue", default=str(DEFAULT_QUEUE_PATH))
     judge_parser.add_argument("--rules", default=str(DEFAULT_RULES_PATH))
+    judge_parser.add_argument("--redundancy-queue", default=str(DEFAULT_REDUNDANCY_QUEUE_PATH))
+    judge_parser.add_argument("--redundancy-rules", default=str(DEFAULT_REDUNDANCY_RULES_PATH))
     judge_parser.set_defaults(func=cmd_judge)
 
     return parser

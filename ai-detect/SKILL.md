@@ -1,6 +1,6 @@
 ---
 name: ai-detect
-description: "Audit drafts, slides, reports, and homework for AI-smelling wording using the user's historical session feedback. Use when the user asks whether a deliverable has 'AI味', sounds unnatural, uses placeholder titles, over-explains, contains process filler, or does not sound like a normal human wrote it."
+description: "Audit drafts, slides, reports, homework, and sendable external messages for AI-smelling wording using Mingdao's historical session feedback. Use when the user asks whether a deliverable has 'AI味', sounds unnatural, has high entropy, uses placeholder titles, over-explains, contains process filler, or does not sound like a normal human wrote it."
 ---
 
 # AI Detect
@@ -16,6 +16,7 @@ It checks whether a draft shows recurrent patterns that this user repeatedly rej
 - placeholder-like
 - too template-driven
 - too process-heavy
+- too high-entropy for a sendable external message
 - not how a normal human would title or phrase it
 
 The skill now has two layers:
@@ -23,9 +24,29 @@ The skill now has two layers:
 - confirmed rules in `data/rules.json`
 - pending review candidates in `data/review_queue.jsonl`
 
+It also has one separate diagnostic owner:
+
+- the `redundancy` subskill under `ai-detect`, which owns `Redundancy diagnostics` for bilingual formal deliverables
+
+For formal `.tex` deliverables, the scanner also runs lightweight
+structural diagnostics:
+
+- displayed-math punctuation continuity
+- LaTeX prose-dash typography for accidental bare ` - ` punctuation, inline-math compounds such as `\(3\)--character`, and any visible English `word-word` compound that should be written with `--`
+- compiled LaTeX overflow checks from sibling `.log` files
+- frame-local citation/footer consistency and deck-wide footer reference style consistency
+
+This catches issues such as a displayed equation ending with a period even
+though the next prose line is a lowercase continuation, an English prose dash
+written as bare ` - ` instead of `--`, an inline-math compound written as
+`\(3\)-character` instead of `\(3\)--character`, or a displayed equation that
+is visibly too wide and already reported by LaTeX as `Overfull \hbox`.
+
 Scope boundary:
 
 - in scope: wording that the agent actually writes into the final `.tex` source, including slide titles, subtitles, section heads, captions, tables, and body copy that will be compiled into the delivery
+- in scope: sendable email or message drafts when the user asks about AI smell, wasteful wording, entropy, over-explanation, or whether the wording sounds human
+- in scope: local email replacement tasks where the user asks to fix one sentence or phrase; flag assistant-added confirmations, background, generic appreciation, and over-complete politeness as high-entropy AI-smell risks
 - out of scope: user plans, requirement drafts, brainstorming titles, `ai-detect` maintenance chat, progress updates, and ordinary agent-user work chat
 
 ## Trigger Conditions
@@ -38,6 +59,9 @@ Use this skill when the user says things like:
 - `标题太像 AI`
 - `废话多`
 - `不要这种模板味`
+- `entropy 太高`
+- `减少 entropy`
+- `这个邮件像不像 AI`
 
 Typical targets:
 
@@ -46,6 +70,7 @@ Typical targets:
 - homework reports
 - LaTeX writeups
 - markdown drafts
+- sendable supplier, faculty, admin, or collaborator emails/messages
 
 ## Canonical Workflow
 
@@ -58,8 +83,16 @@ Decide what the document is trying to be:
 - paper-style writeup
 - review slide deck
 - talk notes
+- sendable email or message
 
 Judge the text against that genre, not against generic English.
+
+For sendable email or message drafts, use a stricter brevity gate:
+
+- If the user asks to replace one sentence, replace only that sentence unless they explicitly ask for a fuller draft.
+- Do not add arrangement confirmations, motivation, rationale, or extra appreciation when the thread already contains that information.
+- Prefer the shortest natural phrase that carries the message; over-complete politeness is an AI-smell risk, not a virtue.
+- Treat generic lines such as `I appreciate your guidance` as suspect unless that appreciation is the actual user-requested message.
 
 ### 2. Extract session-backed candidates first
 
@@ -67,13 +100,13 @@ When the user wants the detector updated, do not invent rules from memory.
 Extract candidates from local session logs first:
 
 ```bash
-python3 $CODEX_HOME/skills/ai-detect/scripts/extract_session_feedback.py extract
+python3 ~/.codex/skills/ai-detect/scripts/extract_session_feedback.py extract
 ```
 
 Only parse these sources for now:
 
-- `$CODEX_HOME/sessions`
-- `$HOME/.claude/projects`
+- `~/.codex/sessions`
+- `~/.claude/projects`
 
 The extractor only reads structured message text.
 It must ignore tool output, `apply_patch`, function returns, plans, and copied system prompts.
@@ -112,7 +145,7 @@ Use this priority order:
 Use:
 
 ```bash
-python3 $CODEX_HOME/skills/ai-detect/scripts/extract_session_feedback.py next --limit 3
+python3 ~/.codex/skills/ai-detect/scripts/extract_session_feedback.py next --limit 3
 ```
 
 The user can judge each item as:
@@ -129,19 +162,19 @@ Do not silently discard borderline cases.
 After the user confirms a candidate, write it back to both the queue and the rules file:
 
 ```bash
-python3 $CODEX_HOME/skills/ai-detect/scripts/extract_session_feedback.py judge <candidate_id> --decision confirmed
+python3 ~/.codex/skills/ai-detect/scripts/extract_session_feedback.py judge <candidate_id> --decision confirmed
 ```
 
 For rejection:
 
 ```bash
-python3 $CODEX_HOME/skills/ai-detect/scripts/extract_session_feedback.py judge <candidate_id> --decision rejected
+python3 ~/.codex/skills/ai-detect/scripts/extract_session_feedback.py judge <candidate_id> --decision rejected
 ```
 
 For keep-watching:
 
 ```bash
-python3 $CODEX_HOME/skills/ai-detect/scripts/extract_session_feedback.py judge <candidate_id> --decision pending --note "keep watching"
+python3 ~/.codex/skills/ai-detect/scripts/extract_session_feedback.py judge <candidate_id> --decision pending --note "keep watching"
 ```
 
 ### 5. Scan deliverables with two output tiers
@@ -149,15 +182,31 @@ python3 $CODEX_HOME/skills/ai-detect/scripts/extract_session_feedback.py judge <
 Use:
 
 ```bash
-python3 $CODEX_HOME/skills/ai-detect/scripts/scan_ai_smell.py <file>
+python3 ~/.codex/skills/ai-detect/scripts/scan_ai_smell.py <file>
 ```
 
 The scanner must report:
 
 1. `Confirmed findings`
 2. `Needs user confirmation`
+3. `Punctuation diagnostics`
+4. `Dash diagnostics`
+5. `Overflow diagnostics`
+6. `Reference diagnostics`
+7. `Redundancy diagnostics`
 
 Do not mix pending items into the confirmed section.
+Treat punctuation diagnostics as a separate structural style pass, not as an
+AI-smell category.
+Treat `Reference diagnostics` as a deck-consistency gate for `.tex` slides:
+each frame body citation number must appear exactly once in the footer
+reference list for that frame, no unused footer references should remain, and
+the deck should not mix short venue-only footer references with full-title
+footer references.
+Treat `Redundancy diagnostics` as a separate high-precision `废话检查`
+surface, not as a claim that a sentence was AI-generated. That surface is
+owned by the `redundancy` subskill rather than by inline logic inside
+`scan_ai_smell.py`.
 
 ## Seeded Confirmed Rules
 
@@ -192,25 +241,33 @@ Use:
 
 The scanner audits drafts.
 The extractor manages session-backed candidate mining and review state.
+The scanner also checks displayed-equation punctuation continuity and compiled
+`Overfull \hbox` warnings for formal `.tex` sources when a sibling `.log` file
+is present, and it flags accidental bare prose ` - `, inline-math compounds
+like `\(3\)-character`, and visible English `word-word` compounds so report
+iterations keep LaTeX dash punctuation consistent with the user's hard `--`
+convention. `Redundancy diagnostics` are delegated to the bundled
+`redundancy` subskill so the parent scanner keeps one stable output section
+name while the redundancy owner can evolve independently.
 
 ## Quick Start
 
 For extraction:
 
 ```bash
-python3 $CODEX_HOME/skills/ai-detect/scripts/extract_session_feedback.py extract
+python3 ~/.codex/skills/ai-detect/scripts/extract_session_feedback.py extract
 ```
 
 For the next review batch with full context:
 
 ```bash
-python3 $CODEX_HOME/skills/ai-detect/scripts/extract_session_feedback.py next --limit 3
+python3 ~/.codex/skills/ai-detect/scripts/extract_session_feedback.py next --limit 3
 ```
 
 For a first-pass scan:
 
 ```bash
-python3 $CODEX_HOME/skills/ai-detect/scripts/scan_ai_smell.py <file>
+python3 ~/.codex/skills/ai-detect/scripts/scan_ai_smell.py <file>
 ```
 
 Then do a human audit:

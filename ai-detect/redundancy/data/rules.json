@@ -1,0 +1,55 @@
+{
+  "version": 1,
+  "rules": [
+    {
+      "rule_id": "redundant_filler__we_organize_this_part_as",
+      "category": "redundant_filler",
+      "status": "confirmed",
+      "patterns": [
+        {
+          "type": "regex",
+          "value": "\\bWe organize this part as\\b"
+        }
+      ],
+      "examples": [
+        "We organize this part as a sequence of repair choices"
+      ],
+      "rewrite_direction": "Delete the deck-management narration and replace it with the actual content claim.",
+      "evidence_count": 1
+    },
+    {
+      "rule_id": "empty_contrast__not_a_list_of_unrelated_papers",
+      "category": "empty_contrast",
+      "status": "confirmed",
+      "patterns": [
+        {
+          "type": "regex",
+          "value": "not\\s+(?:as\\s+)?a\\s+list\\s+of\\s+unrelated\\s+papers"
+        }
+      ],
+      "examples": [
+        "not as a list of unrelated papers"
+      ],
+      "rewrite_direction": "Delete the empty contrast and state the real distinction directly.",
+      "evidence_count": 1
+    },
+    {
+      "rule_id": "sequencer_label__first_then_finally",
+      "category": "sequencer_label",
+      "status": "confirmed",
+      "patterns": [
+        {
+          "type": "regex",
+          "value": "(?:^|\\{)\\s*(?:First|Then|Finally)\\s*--\\s+[A-Z]"
+        }
+      ],
+      "examples": [
+        "First -- Can domain randomization already make policies transferable before deployment?",
+        "Then -- Can calibration make the simulator closer to reality?",
+        "Finally -- Can online adaptation continue transfer on the robot?"
+      ],
+      "rewrite_direction": "Remove ordering scaffolds such as First/Then/Finally and title the step directly.",
+      "evidence_count": 1
+    }
+  ]
+}

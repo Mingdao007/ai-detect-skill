@@ -1,0 +1,16 @@
+[
+  {
+    "name": "tex-empty-contrast",
+    "prompt": "用 `redundancy` 检查一个 `.tex` 报告片段里是否存在 empty contrast，例如 'not as a list of unrelated papers' 这种低信息对比。",
+    "expected": "命中 `empty_contrast` 或等价 fix，不把它当成普通 AI-smell。"
+  },
+  {
+    "name": "md-axis-repetition",
+    "prompt": "检查一个 Markdown 比较列表里连续重复“问题定义不同 / 输出接口不同 / 任务设置不同”是否属于低信息轴重复。",
+    "expected": "命中 `axis_repetition`，建议前置比较轴一次。"
+  },
+  {
+    "name": "ts-slide-string-scan",
+    "prompt": "检查一个 `.ts` slide builder 文件，只提取 title/body 等用户可见字符串并做 redundancy 扫描，不要扫到样式 key 或路径常量。",
+    "expected": "AST 抽取只包含用户可见字符串，且不会把普通实现字符串误报进结果。"
+  }

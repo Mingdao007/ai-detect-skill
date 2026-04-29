@@ -1,0 +1,4 @@
+interface:
+  display_name: "AI Detect"
+  short_description: "Audit drafts for AI-smelling wording and titles."
+  default_prompt: "Use $ai-detect to find AI-smelling titles, template scaffolding, and process filler in this draft, then suggest direct rewrites."

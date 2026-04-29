@@ -2,12 +2,13 @@
 
 This file is the human-readable summary for `ai-detect`.
 
-Use it to understand the user's a separate preference-memory workflow.
+Use it to understand the user's taste.
 Do not treat it as the only executable source.
 
 Scope boundary:
 
 - these signals are about the final `.tex` wording that the agent writes into the delivery
+- these signals also apply to sendable email or message drafts when the user asks about AI smell, wasteful wording, entropy, or whether the writing sounds human
 - they are not a demand that user plans, detector-maintenance chat, or ordinary working chat must sound non-AI
 
 The machine-readable source now lives in:
@@ -70,7 +71,7 @@ Working rule:
 
 Evidence:
 
-- 2026-03-06: user rejected `Course Homework 1 Solutions`
+- 2026-03-06: user rejected `MECH5561 Homework 1 Solutions`
 
 Working rule:
 
@@ -86,6 +87,34 @@ Working rule:
 
 - do not lead a result sentence with filler such as `the six cases are:`
 - in report prose, point directly to the table, figure, or result statement
+
+### 7. External drafts should reduce entropy
+
+Evidence:
+
+- 2026-04-24: user treated over-explained supplier-email wording as AI smell. The issue was not mentioning `HS code`, `弯矩`, `CAD`, or follow-up materials; the issue was leaking internal analysis into a sendable external draft.
+- 2026-04-24: the user's final KWR75B borrowing email kept only the recipient-facing facts: expected load, missing tooling details, borrowing request, time window, and fee/logistics question.
+
+Working rule:
+
+- in supplier, faculty, admin, and other sendable external drafts, each sentence should change the recipient's state
+- keep boundary conditions, needed context, plan, timing, and concrete asks
+- delete internal reasoning such as `我理解主要是...`, `这里主要是...`, `你可以理解成...`, and speculative follow-up scaffolding unless the recipient needs it to decide or reply
+- preserve the user's wording where possible; compress structure before rewriting the voice
+
+Example pair:
+
+- high-entropy draft: `关于您提到的工装尺寸和弯矩，我理解主要是需要评估末端工具重量以及力作用点到传感器的距离。现阶段我还没有最终 CAD 尺寸，如果后续确定具体连接件，我可以再补充重量、长度和安装方式供您评估。`
+- preferred concise draft: `没有计入工装重量，因为前期主要做传感器和 UR5e 的力控验证，工装还没有确定。初步考虑使用比较轻的连接件或接触头，不会使用很重或很长的末端工具。`
+
+### 8. Redundancy diagnostics moved to the subskill owner
+
+The dedicated redundancy owner now lives at:
+
+- `/Users/andyl/.codex/skills/ai-detect/redundancy/SKILL.md`
+
+Read that subskill's own `historical-signals.md`, `rules.json`, and
+`review_queue.jsonl` for redundancy-specific evidence and rule evolution.
 
 ## Pending Review Buckets
 
@@ -109,8 +138,12 @@ These patterns are plausible but should stay in the review queue until the user 
 | `Question 1` | actual subsection name |
 | `Answer:` | remove |
 | `Task 3` | real task title |
-| `Course Homework 1 Solutions` | course title + assignment subtitle |
+| `MECH5561 Homework 1 Solutions` | course title + assignment subtitle |
 | `Directly answering ...` | delete and start with the answer |
 | `Three-column comparison` | describe variables or conditions directly |
 | `What this deck is trying to do` | content title such as `Objectives of this review` |
 | `the six cases are:` | direct result sentence or `shown in Table ...` |
+| `我理解主要是...` in a sendable email | recipient-facing fact or delete |
+| `现阶段...如果后续...再补充...` | one concise boundary condition, or omit |
+| `We organize this part as ... not as a list of unrelated papers` | state the actual organizing claim directly, or delete the sentence |
+| `First --`, `Then --`, `Finally --` in slide questions | replace with direct content labels or direct questions |
