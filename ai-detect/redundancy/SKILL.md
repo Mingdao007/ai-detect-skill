@@ -1,7 +1,6 @@
 ---
 name: redundancy
 description: "Audit bilingual formal deliverables for low-information repetition, empty contrast, sequencer scaffolds, adjacent restatement, and repeated comparison-axis labels. Use when the user asks whether a draft feels redundant, wordy, low-information, or says the same thing twice."
-when_to_use: "Use under `ai-detect` when the user asks whether a formal draft has redundancy, 废话, 信息增益太低, empty contrast, repeated scaffolding, or sentence-to-sentence restatement."
 ---
 
 # Redundancy
