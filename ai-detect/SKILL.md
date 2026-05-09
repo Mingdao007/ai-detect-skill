@@ -298,3 +298,12 @@ If the user asks for a fix:
 - Do not silently upgrade uncertain cases into confirmed rules.
 - Do not preserve a bad title just because it is technically understandable.
 - If a phrase is generic but acceptable in the genre, leave it.
+
+
+## Validation And Checkpoints
+
+- Before final handoff, validate the requested artifact or decision against this skill's output contract and report the verification result explicitly.
+- Before any local mutation, pass the recoverability gate: create a rollback point when the change is reversible, and request confirmation when backup cannot cover the risk.
+- Use an explicit checkpoint when required input is missing, tool evidence conflicts, or repeated attempts fail; wait for approval or route to the named owner instead of guessing.
+- For multi-session work, update a progress or HANDOFF artifact with current state, verified result, and next executable step.
+- For L1/default-triggered work, if the path fails or becomes ambiguous, stop the default route, state the failure, and provide recovery options instead of expanding scope silently.

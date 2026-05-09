@@ -143,3 +143,11 @@ The subskill is ready only when:
 - `ai-detect` can call it and preserve the `Redundancy diagnostics` section name
 - pending redundancy candidates do not leak into confirmed output
 - at least one positive and one negative case pass for each supported surface
+
+
+## Validation And Checkpoints
+
+- Before final handoff, validate the requested artifact or decision against this skill's output contract and report the verification result explicitly.
+- Before any local mutation, pass the recoverability gate: create a rollback point when the change is reversible, and request confirmation when backup cannot cover the risk.
+- Use an explicit checkpoint when required input is missing, tool evidence conflicts, or repeated attempts fail; wait for approval or route to the named owner instead of guessing.
+- For multi-session work, update a progress or HANDOFF artifact with current state, verified result, and next executable step.
