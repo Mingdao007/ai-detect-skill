@@ -19,9 +19,9 @@ the current task needs them.
 2. Bind the concrete target: source file, artifact, repo, device, document,
    dataset, or user-facing deliverable.
 3. Use the smallest relevant workflow from this entrypoint first.
-4. Load `references/entrypoint-details.md` when the task needs detailed
-   procedures, examples, command recipes, acceptance criteria, or one of the
-   detailed sections listed below.
+4. Before scanning a deliverable, applying historical rules, running bundled
+   scripts, rewriting high-risk wording, or reporting AI-smell status, read
+   `references/entrypoint-details.md`.
 5. Preserve local owner boundaries: route to a narrower skill or repo-specific
    workflow when the detailed reference indicates a more specific owner.
 
