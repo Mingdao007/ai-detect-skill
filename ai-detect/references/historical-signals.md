@@ -111,7 +111,7 @@ Example pair:
 
 The dedicated redundancy owner now lives at:
 
-- `/Users/andyl/.codex/skills/ai-detect/redundancy/SKILL.md`
+- `redundancy/SKILL.md`
 
 Read that subskill's own `historical-signals.md`, `rules.json`, and
 `review_queue.jsonl` for redundancy-specific evidence and rule evolution.
