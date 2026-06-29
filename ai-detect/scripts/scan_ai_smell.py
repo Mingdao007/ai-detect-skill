@@ -34,6 +34,48 @@ PAREN_LABEL_RE = re.compile(r"\([A-Za-z0-9_.:-]+\)")
 VISIBLE_TEXT_CLEAN_RE = re.compile(r"[^A-Za-z0-9\s,.;:!?'\-]")
 WORD_RE = re.compile(r"[A-Za-z]+(?:'[A-Za-z]+)?")
 SENTENCE_SPLIT_RE = re.compile(r"(?<=[.!?])\s+")
+PROVENANCE_SECTION_RE = re.compile(r"\bSeminar\s+information\b", re.IGNORECASE)
+PROVENANCE_LABEL_RE = re.compile(
+    r"\b(?:Evidence|Sources?|Materials?)\s+"
+    r"(?:used|retained|package|basis)\b",
+    re.IGNORECASE,
+)
+INTERNAL_ARTIFACT_RE = re.compile(
+    r"\b(?:Screen\s+Studio|recording\s+metadata|ASR\s+transcript|ASR|"
+    r"Whisper\s+transcript|screen\s+capture|recording\s+tool|"
+    r"transcript\s+(?:configuration|log|metadata)|Zoom\s+attendance\s+frame|"
+    r"attendance\s+proof|sidecar|handoff|checklist|"
+    r"extracted\s+(?:seminar\s+)?(?:slides|frames)|asr_config|audio_probe|"
+    r"ffprobe|SHA-?256|metadata\s+note)\b",
+    re.IGNORECASE,
+)
+INTERNAL_ARTIFACT_CONTEXT_RE = re.compile(
+    r"\b(?:evidence|report|retained|stored|kept|included|includes?|"
+    r"contains?|metadata|configuration|log|package|frame|slides?|"
+    r"recorded|captured|transcribed|verified|submission|proof)\b",
+    re.IGNORECASE,
+)
+PROCESS_DISCLOSURE_RE = re.compile(
+    r"\b(?:recorded|captured|transcribed|processed|verified|retained|stored|kept|"
+    r"included|contains?)\b.{0,120}"
+    r"\b(?:Screen\s+Studio|screen\s+capture|recording\s+tool|Whisper|ASR|"
+    r"transcript|metadata|config(?:uration)?|log|evidence\s+package|sidecar|"
+    r"handoff|checklist|attendance\s+proof)\b",
+    re.IGNORECASE,
+)
+RETENTION_RE = re.compile(
+    r"\b(?:ASR\s+)?transcript\b.{0,80}"
+    r"\b(?:retained|stored|kept|included)\b.{0,60}"
+    r"\b(?:with|in)\s+(?:this\s+)?report\b",
+    re.IGNORECASE,
+)
+EVIDENCE_PACKAGE_RE = re.compile(
+    r"\b(?:the\s+)?evidence\s+package\s+(?:for\s+this\s+report\s+)?"
+    r"(?:includes?|contains?|uses?)\b.{0,160}"
+    r"\b(?:Screen\s+Studio|metadata|ASR|transcript|extracted\s+"
+    r"(?:slides|frames)|configuration|log)\b",
+    re.IGNORECASE,
+)
 FRAME_BEGIN_RE = re.compile(r"^\s*\\begin\{frame\}(?:\[.*\])?")
 FRAME_END_RE = re.compile(r"^\s*\\end\{frame\}")
 SIMPLE_NEWCOMMAND_RE = re.compile(r"\\newcommand\{\\([A-Za-z@]+)\}\{(.+)\}")
@@ -248,6 +290,20 @@ def tex_body_lines(text: str) -> list[tuple[int, str]]:
     return body
 
 
+def tex_report_body_lines(text: str) -> list[tuple[int, str]]:
+    body: list[tuple[int, str]] = []
+    for line_no, raw_line in tex_body_lines(text):
+        stripped = raw_line.strip()
+        if (
+            stripped.startswith(r"\bibliographystyle")
+            or stripped.startswith(r"\bibliography")
+            or stripped.startswith(r"\begin{thebibliography}")
+        ):
+            break
+        body.append((line_no, raw_line))
+    return body
+
+
 def strip_tex_comment(raw_line: str) -> str:
     pieces: list[str] = []
     escaped = False
@@ -450,6 +506,45 @@ def scan_pending(text: str, queue_entries: list[dict], rules: list[dict]) -> lis
                 if key not in seen:
                     seen.add(key)
                     findings.append((idx, entry, line.strip()))
+    return findings
+
+
+def scan_report_provenance(path: Path, text: str) -> list[dict]:
+    if path.suffix != ".tex":
+        return []
+    findings: list[dict] = []
+    for line_no, raw_line in tex_report_body_lines(text):
+        visible = extract_visible_text(raw_line)
+        if not visible:
+            continue
+        reason = ""
+        if PROVENANCE_SECTION_RE.search(visible):
+            reason = "visible admin/provenance section in formal report body"
+        elif PROVENANCE_LABEL_RE.search(visible):
+            reason = "evidence/source label reads like an internal audit note"
+        elif RETENTION_RE.search(visible):
+            reason = "transcript retention/process note leaked into report body"
+        elif EVIDENCE_PACKAGE_RE.search(visible):
+            reason = "evidence package inventory leaked into report body"
+        elif PROCESS_DISCLOSURE_RE.search(visible):
+            reason = "submission process/toolchain disclosure leaked into report body"
+        elif INTERNAL_ARTIFACT_RE.search(visible) and INTERNAL_ARTIFACT_CONTEXT_RE.search(visible):
+            reason = "internal recording/transcript/metadata artifact leaked into report body"
+        if not reason:
+            continue
+        findings.append(
+            {
+                "line_no": line_no,
+                "text": visible,
+                "reason": reason,
+                "fix": (
+                    "remove process/evidence-package wording from the formal report body; "
+                    "keep attendance proof, recording metadata, transcript/config/logs, and "
+                    "QA notes in sidecar evidence/checklist/handoff files unless the assignment "
+                    "explicitly requires them in the body."
+                ),
+            }
+        )
     return findings
 
 
@@ -821,6 +916,7 @@ def main() -> None:
     confirmed_findings = scan_confirmed(text, rules)
     pending_findings = scan_pending(text, queue_entries, rules)
     punctuation_findings = scan_punctuation(text) if path.suffix == ".tex" else []
+    provenance_findings = scan_report_provenance(path, text)
     dash_findings = scan_tex_dash_punctuation(text) if path.suffix == ".tex" else []
     overflow_findings = scan_overflow(path, text)
     reference_findings = scan_reference_consistency(path, text)
@@ -839,6 +935,7 @@ def main() -> None:
         not confirmed_findings
         and not pending_findings
         and not punctuation_findings
+        and not provenance_findings
         and not dash_findings
         and not overflow_findings
         and not reference_findings
@@ -846,6 +943,7 @@ def main() -> None:
     ):
         print("No confirmed or pending AI-smell signals matched.")
         print("Punctuation diagnostics: 0")
+        print("Provenance diagnostics: 0")
         print("Dash diagnostics: 0")
         print("Overflow diagnostics: 0")
         print("Reference diagnostics: 0")
@@ -895,6 +993,18 @@ def main() -> None:
             )
     else:
         print("Punctuation diagnostics: 0")
+
+    print()
+
+    if provenance_findings:
+        print(f"Provenance diagnostics: {len(provenance_findings)}")
+        for finding in provenance_findings:
+            print(f"- line {finding['line_no']} [formal_report_body_provenance_disclosure]")
+            print(f"  text: {finding['text']}")
+            print(f"  why:  {finding['reason']}")
+            print(f"  fix:  {finding['fix']}")
+    else:
+        print("Provenance diagnostics: 0")
 
     print()
 

@@ -50,6 +50,7 @@ structural diagnostics:
 
 - displayed-math punctuation continuity
 - LaTeX prose-dash typography for accidental bare ` - ` punctuation, inline-math compounds such as `\(3\)--character`, and any visible English `word-word` compound that should be written with `--`
+- formal report body provenance leakage, such as visible `Seminar information`, `Evidence used`, `Screen Studio`, `Whisper` or `ASR transcript`, recording metadata, screen-capture narration, transcript/config/log narration, or evidence-package inventory in the reader-facing PDF body
 - compiled LaTeX overflow checks from sibling `.log` files
 - frame-local citation/footer consistency and deck-wide footer reference style consistency
 
@@ -58,6 +59,16 @@ though the next prose line is a lowercase continuation, an English prose dash
 written as bare ` - ` instead of `--`, an inline-math compound written as
 `\(3\)-character` instead of `\(3\)--character`, or a displayed equation that
 is visibly too wide and already reported by LaTeX as `Overfull \hbox`.
+For formal report-style deliverables, process provenance belongs in sidecar
+evidence/checklist/handoff files, not the report body. A sentence that tells
+the reader which recording tool, ASR transcript, metadata, config, log, or
+evidence package was retained is a blocking authenticity leak unless the
+assignment explicitly asks for that disclosure in the body.
+Use a positive structure rule, not only a blacklist: the reader-facing body
+should contain the assignment-facing argument, reflection, method discussion,
+conclusion, and references. Attendance proof, recording route, transcript
+route, QA route, and package inventory are sidecar material even when they are
+true and useful for audit.
 
 Scope boundary:
 
@@ -207,14 +218,19 @@ The scanner must report:
 1. `Confirmed findings`
 2. `Needs user confirmation`
 3. `Punctuation diagnostics`
-4. `Dash diagnostics`
-5. `Overflow diagnostics`
-6. `Reference diagnostics`
-7. `Redundancy diagnostics`
+4. `Provenance diagnostics`
+5. `Dash diagnostics`
+6. `Overflow diagnostics`
+7. `Reference diagnostics`
+8. `Redundancy diagnostics`
 
 Do not mix pending items into the confirmed section.
 Treat punctuation diagnostics as a separate structural style pass, not as an
 AI-smell category.
+Treat `Provenance diagnostics` as a blocking formal-deliverable authenticity
+gate: evidence, attendance proof, Screen Studio or recording metadata, ASR
+transcript/config/logs, checksums, and QA notes should stay in sidecar files
+unless the assignment explicitly requires them in the PDF/report body.
 Treat `Reference diagnostics` as a deck-consistency gate for `.tex` slides:
 each frame body citation number must appear exactly once in the footer
 reference list for that frame, no unused footer references should remain, and
@@ -224,6 +240,22 @@ Treat `Redundancy diagnostics` as a separate high-precision `废话检查`
 surface, not as a claim that a sentence was AI-generated. That surface is
 owned by the `redundancy` subskill rather than by inline logic inside
 `scan_ai_smell.py`.
+
+### 6. Add the body/sidecar gate to human or agent reviewers
+
+When using Codex reviewers, Claude CLI reviewers, or a mixed `6+2` review for a
+formal report, every reviewer prompt must include this cross-cutting gate even
+when the lane is otherwise narrow:
+
+- Review the reader-facing body and the sidecar evidence package separately.
+- Evidence sufficiency passes only when evidence exists in the sidecar package.
+- If the body itself narrates recording tools, ASR/Whisper transcripts,
+  metadata, configs, logs, checksums, screenshots as evidence, or package
+  retention, mark the deliverable `NO-GO` even if the evidence package is
+  complete.
+- Do not let an old internal template normalize visible `Seminar information`,
+  `Evidence used`, or similar administrative/provenance blocks.
+- Each reviewer must explicitly answer: `Body/sidecar boundary: GO or NO-GO`.
 
 ## Seeded Confirmed Rules
 
