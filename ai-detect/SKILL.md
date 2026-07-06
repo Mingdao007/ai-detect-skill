@@ -24,6 +24,8 @@ the current task needs them.
    `references/entrypoint-details.md`.
 5. Preserve local owner boundaries: route to a narrower skill or repo-specific
    workflow when the detailed reference indicates a more specific owner.
+6. For dedicated redundancy diagnostics, route to the `redundancy` subskill
+   under this skill instead of reimplementing low-information repetition checks.
 
 ## Detailed Reference
 
