@@ -15,16 +15,15 @@ the current task needs them.
 
 ## Workflow
 
-1. Confirm the user request matches this skill's frontmatter description.
-2. Bind the concrete target: source file, artifact, repo, device, document,
+1. Bind the concrete target: source file, artifact, repo, device, document,
    dataset, or user-facing deliverable.
-3. Use the smallest relevant workflow from this entrypoint first.
-4. Before scanning a deliverable, applying historical rules, running bundled
+2. Use the smallest relevant workflow from this entrypoint first.
+3. Before scanning a deliverable, applying historical rules, running bundled
    scripts, rewriting high-risk wording, or reporting AI-smell status, read
    `references/entrypoint-details.md`.
-5. Preserve local owner boundaries: route to a narrower skill or repo-specific
+4. Preserve local owner boundaries: route to a narrower skill or repo-specific
    workflow when the detailed reference indicates a more specific owner.
-6. For dedicated redundancy diagnostics, route to the `redundancy` subskill
+5. For dedicated redundancy diagnostics, route to the `redundancy` subskill
    under this skill instead of reimplementing low-information repetition checks.
 
 ## Detailed Reference
